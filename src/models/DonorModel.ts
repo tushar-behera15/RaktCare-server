@@ -7,6 +7,7 @@ export interface IDonor extends Document {
     diseases: string[];
     isAvailableForDonation: boolean;
     lastDonationDate?: Date;
+    donationCount: number;
 }
 
 const donorSchema = new mongoose.Schema<IDonor>({
@@ -35,6 +36,11 @@ const donorSchema = new mongoose.Schema<IDonor>({
     lastDonationDate: {
         type: Date,
         default: null
+    },
+    donationCount: {
+        type: Number,
+        default: 0,
+        min: 0,
     },
 }, {
     timestamps: true
