@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import UserModel from "../models/UserModel";
 import jwt from "jsonwebtoken";
-import sessionModel from "../models/SessionModel";
 import { sendEmail } from "../services/email";
 import { generateOtp, OtpHtml } from "../utils/otpGenerate";
 import otpModel from "../models/Otp";
@@ -96,21 +95,20 @@ export async function login(req: Request, res: Response) {
             role: user.role
         }, process.env.JWT_SECRET!, { expiresIn: "7d" })
 
-        const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
-        const session = await sessionModel.create({
-            userId: user._id,
-            refreshTokenHash,
-            ip: req.ip,
-            userAgent: req.headers["user-agent"]
-        })
+        // const session = await sessionModel.create({
+        //     userId: user._id,
+        //     refreshTokenHash,
+        //     ip: req.ip,
+        //     userAgent: req.headers["user-agent"]
+        // })
 
-        const accessToken = jwt.sign({
-            sessionId: session._id,
-            userId: user._id,
-            email: user.email,
-            role: user.role
-        }, process.env.JWT_SECRET!, { expiresIn: "15m" })
+        // const accessToken = jwt.sign({
+        //     sessionId: session._id,
+        //     userId: user._id,
+        //     email: user.email,
+        //     role: user.role
+        // }, process.env.JWT_SECRET!, { expiresIn: "15m" })
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
@@ -122,7 +120,7 @@ export async function login(req: Request, res: Response) {
         return res.status(200).json({
             success: true,
             message: "User logged in successfully",
-            token: accessToken,
+            // token: accessToken,
             user: {
                 fullName: user.fullName,
                 email: user.email,
@@ -136,45 +134,44 @@ export async function login(req: Request, res: Response) {
 
 }
 
-export async function getMe(req: Request, res: Response) {
+export async function getMe(req: Request & { user?: { userId: string; email?: string; role?: string } }, res: Response) {
     try {
-        const token = req.headers.authorization?.split(" ")[1];
-
+        const token = req.cookies.refreshToken;
         if (!token) {
-            return res.status(401).json({ success: false, message: "Token not found" });
+            return res.status(401).json({ success: false, message: "Unauthorized" });
         }
-
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string, email: string, role: string };
-        const user = await UserModel.findById(decodedToken.userId);
+        const decodedToken = jwt.decode(token) as { userId: string };
+        const userId = decodedToken.userId;
+        const user = await UserModel.findById(userId);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
-        if (user!.role == 'donor') {
+        if (user?.role == 'donor') {
             const donor = await DonorModel.findOne({ userId: user!._id });
             return res.status(200).json({
                 success: true,
                 message: "User fetched successfully",
                 user: {
-                    userId: user!._id,
-                    email: user!.email,
-                    role: user!.role,
-                    fullName: user!.fullName,
-                    phone: user!.phone,
-                    bloodGroup: user!.bloodGroup,
-                    gender: user!.gender,
-                    dateOfBirth: user!.dateOfBirth,
-                    address: user!.address,
+                    userId: user?._id,
+                    email: user?.email,
+                    role: user?.role,
+                    fullName: user?.fullName,
+                    phone: user?.phone,
+                    bloodGroup: user?.bloodGroup,
+                    gender: user?.gender,
+                    dateOfBirth: user?.dateOfBirth,
+                    address: user?.address,
                 },
                 donor: {
-                    weight: donor!.weight,
-                    hemoglobin: donor!.hemoglobin,
-                    diseases: donor!.diseases,
-                    isAvailableForDonation: donor!.isAvailableForDonation,
-                    lastDonationDate: donor!.lastDonationDate
+                    weight: donor?.weight,
+                    hemoglobin: donor?.hemoglobin,
+                    diseases: donor?.diseases,
+                    isAvailableForDonation: donor?.isAvailableForDonation,
+                    lastDonationDate: donor?.lastDonationDate
                 }
             });
         }
-        else if (user!.role == 'hospital') {
+        else if (user?.role == 'hospital') {
             const hospital = await HospitalModel.findOne({ userId: user!._id });
             return res.status(200).json({
                 success: true,
@@ -214,97 +211,112 @@ export async function getMe(req: Request, res: Response) {
 
 
     } catch (err) {
+        console.log(err);
         return res.status(500).json({ success: false, message: "Internal server error", error: err });
     }
 }
 
-export async function refreshToken(req: Request, res: Response) {
-    try {
-        const refreshToken = req.cookies.refreshToken;
-        if (!refreshToken) {
-            return res.status(401).json({ success: false, message: "Refresh token not found" });
-        }
-        const decodedToken = jwt.verify(refreshToken, process.env.JWT_SECRET!) as { userId: string, email: string, role: string };
+// export async function refreshToken(req: Request, res: Response) {
+//     try {
+//         const refreshToken = req.cookies.refreshToken;
+//         if (!refreshToken) {
+//             return res.status(401).json({ success: false, message: "Refresh token not found" });
+//         }
+//         const decodedToken = jwt.verify(refreshToken, process.env.JWT_SECRET!) as { userId: string, email: string, role: string };
 
-        const sessions = await sessionModel.find({ userId: decodedToken.userId, revoked: false });
-        let session = null;
-        for (const s of sessions) {
-            const isValid = await bcrypt.compare(refreshToken, s.refreshTokenHash);
-            if (isValid) {
-                session = s;
-                break;
-            }
-        }
+//         const sessions = await sessionModel.find({ userId: decodedToken.userId, revoked: false });
+//         let session = null;
+//         for (const s of sessions) {
+//             const isValid = await bcrypt.compare(refreshToken, s.refreshTokenHash);
+//             if (isValid) {
+//                 session = s;
+//                 break;
+//             }
+//         }
 
-        if (!session) {
-            return res.status(404).json({ success: false, message: "Session not found" });
-        }
-        const accessToken = jwt.sign({
-            email: decodedToken.email,
-            userId: decodedToken.userId,
-            role: decodedToken.role,
-
-
-        }, process.env.JWT_SECRET!, { expiresIn: "15m" })
-
-        const newrefreshToken = jwt.sign({
-            email: decodedToken.email,
-            userId: decodedToken.userId,
-            role: decodedToken.role,
+//         if (!session) {
+//             return res.status(404).json({ success: false, message: "Session not found" });
+//         }
+//         const accessToken = jwt.sign({
+//             email: decodedToken.email,
+//             userId: decodedToken.userId,
+//             role: decodedToken.role,
 
 
-        }, process.env.JWT_SECRET!, { expiresIn: "7d" })
+//         }, process.env.JWT_SECRET!, { expiresIn: "15m" })
 
-        const newrefreshTokenHash = await bcrypt.hash(newrefreshToken, 10);
-        session.refreshTokenHash = newrefreshTokenHash;
-        await session.save();
-
-        res.cookie("refreshToken", newrefreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000, //1 week
-        });
+//         const newrefreshToken = jwt.sign({
+//             email: decodedToken.email,
+//             userId: decodedToken.userId,
+//             role: decodedToken.role,
 
 
-        return res.status(200).json({
-            success: true,
-            message: "Access token refreshed successfully",
-            token: accessToken,
-        });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: "Internal server error", error: err });
-    }
-}
+//         }, process.env.JWT_SECRET!, { expiresIn: "7d" })
+
+//         const newrefreshTokenHash = await bcrypt.hash(newrefreshToken, 10);
+//         session.refreshTokenHash = newrefreshTokenHash;
+//         await session.save();
+
+//         res.cookie("refreshToken", newrefreshToken, {
+//             httpOnly: true,
+//             secure: true,
+//             sameSite: "strict",
+//             maxAge: 7 * 24 * 60 * 60 * 1000, //1 week
+//         });
+
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Access token refreshed successfully",
+//             token: accessToken,
+//         });
+//     } catch (err) {
+//         return res.status(500).json({ success: false, message: "Internal server error", error: err });
+//     }
+// }
+
+// export async function logout(req: Request, res: Response) {
+//     try {
+//         const refreshToken = req.cookies.refreshToken;
+//         if (!refreshToken) {
+//             return res.status(401).json({ success: false, message: "Refresh token not found" });
+//         }
+
+//         const decodedToken = jwt.decode(refreshToken) as { userId: string } | null;
+//         if (!decodedToken || !decodedToken.userId) {
+//             return res.status(401).json({ success: false, message: "Invalid refresh token" });
+//         }
+
+//         const sessions = await sessionModel.find({ userId: decodedToken.userId, revoked: false });
+//         let session = null;
+//         for (const s of sessions) {
+//             const isValid = await bcrypt.compare(refreshToken, s.refreshTokenHash);
+//             if (isValid) {
+//                 session = s;
+//                 break;
+//             }
+//         }
+
+//         if (!session) {
+//             return res.status(404).json({ success: false, message: "Session not foundhhhh" });
+//         }
+//         session.revoked = true;
+//         await session.save();
+//         res.clearCookie("refreshToken");
+//         return res.status(200).json({
+//             success: true,
+//             message: "User logged out successfully",
+//         });
+//     } catch (err) {
+//         return res.status(500).json({ success: false, message: "Internal server error", error: err });
+//     }
+// }
 
 export async function logout(req: Request, res: Response) {
     try {
-        const refreshToken = req.cookies.refreshToken;
-        if (!refreshToken) {
-            return res.status(401).json({ success: false, message: "Refresh token not found" });
-        }
-
-        const decodedToken = jwt.decode(refreshToken) as { userId: string } | null;
-        if (!decodedToken || !decodedToken.userId) {
-            return res.status(401).json({ success: false, message: "Invalid refresh token" });
-        }
-
-        const sessions = await sessionModel.find({ userId: decodedToken.userId, revoked: false });
-        let session = null;
-        for (const s of sessions) {
-            const isValid = await bcrypt.compare(refreshToken, s.refreshTokenHash);
-            if (isValid) {
-                session = s;
-                break;
-            }
-        }
-
-        if (!session) {
-            return res.status(404).json({ success: false, message: "Session not foundhhhh" });
-        }
-        session.revoked = true;
-        await session.save();
-        res.clearCookie("refreshToken");
+        res.clearCookie("refreshToken", {
+            maxAge: 0
+        });
         return res.status(200).json({
             success: true,
             message: "User logged out successfully",
@@ -333,17 +345,29 @@ export async function verifyOtp(req: Request, res: Response) {
 
         const user = await UserModel.findByIdAndUpdate(otpRecord.user, {
             isVerified: true,
-        });
+        }, { new: true });
 
         await otpModel.deleteMany({ email });
+        const refreshToken = jwt.sign({
+            userId: user?._id,
+            email: user?.email,
+            role: user?.role
+        }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        })
 
         return res.status(200).json({
             success: true,
             message: "Email verified successfully",
             user: {
-                email: user!.email,
-                role: user!.role,
-                verified: user!.isVerified
+                fullName: user?.fullName,
+                email: user?.email,
+                role: user?.role,
             }
         });
     } catch (err) {

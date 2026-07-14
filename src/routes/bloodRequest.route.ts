@@ -7,7 +7,7 @@ import {
     updateBloodRequestStatus,
     deleteBloodRequest,
 } from "../controllers/bloodRequestController";
-import { isAuthenticated, validate } from "../middlewares/authMiddleware";
+import { validate } from "../middlewares/authMiddleware";
 import {
     bloodRequestSchema,
     updateBloodRequestSchema,
@@ -18,7 +18,6 @@ const bloodRequestRouter = Router();
 
 bloodRequestRouter.post(
     "/create",
-    isAuthenticated,
     validate(bloodRequestSchema),
     createBloodRequest
 );
@@ -30,18 +29,16 @@ bloodRequestRouter.get("/:id", getBloodRequestById);
 
 bloodRequestRouter.put(
     "/update/:id",
-    isAuthenticated,
     validate(updateBloodRequestSchema),
     updateBloodRequest
 );
 
 bloodRequestRouter.patch(
     "/status/:id",
-    isAuthenticated,
     validate(updateBloodRequestStatusSchema),
     updateBloodRequestStatus
 );
 
-bloodRequestRouter.delete("/delete/:id", isAuthenticated, deleteBloodRequest);
+bloodRequestRouter.delete("/delete/:id", deleteBloodRequest);
 
 export default bloodRequestRouter;

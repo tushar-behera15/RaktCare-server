@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createHospitalProfile, getAllHospitals, getHospitalById, updateHospitalProfile } from "../controllers/hospitalController";
-import { validate, isAuthenticated } from "../middlewares/authMiddleware";
+import { validate } from "../middlewares/authMiddleware";
 import { hospitalProfileSchema } from "../validators/hospital.validation";
 import { recipientSchema } from "../validators/recipient.validation";
 import { confirmDonation, createRecipient, deleteRecipientById, findMatchingDonors, getAllRecipient, getRecipientById, updateRecipientById } from "../controllers/recipientController";
@@ -10,7 +10,7 @@ import { addBloodStock, getBloodStockByGroup, getHospitalBloodStock, updateBlood
 
 const hospitalRouter = Router();
 // Hospital routes
-hospitalRouter.post("/create-profile", isAuthenticated, validate(hospitalProfileSchema), createHospitalProfile)
+hospitalRouter.post("/create-profile", validate(hospitalProfileSchema), createHospitalProfile)
 
 hospitalRouter.put("/update-profile/:id", validate(hospitalProfileSchema), updateHospitalProfile)
 
@@ -19,7 +19,7 @@ hospitalRouter.get("/:id", getHospitalById)
 hospitalRouter.get("/", getAllHospitals)
 
 // Recipient routes
-hospitalRouter.post("/recipient/create", isAuthenticated, validate(recipientSchema), createRecipient
+hospitalRouter.post("/recipient/create", validate(recipientSchema), createRecipient
 );
 
 hospitalRouter.get("/recipient/all", getAllRecipient);

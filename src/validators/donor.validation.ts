@@ -8,6 +8,7 @@ export const donorProfileSchema = z.object({
         })
         .min(45, "Minimum weight to donate blood is 45 kg.")
         .max(250, "Please enter a valid weight.")
+        .nullable()
         .optional(),
 
     hemoglobin: z
@@ -16,6 +17,7 @@ export const donorProfileSchema = z.object({
         })
         .min(12, "Hemoglobin must be at least 12 g/dL.")
         .max(20, "Please enter a valid hemoglobin level.")
+        .nullable()
         .optional(),
 
     diseases: z

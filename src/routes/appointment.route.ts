@@ -7,7 +7,7 @@ import {
     updateAppointmentStatus,
     deleteAppointment,
 } from "../controllers/appointmentController";
-import { isAuthenticated, validate } from "../middlewares/authMiddleware";
+import { validate } from "../middlewares/authMiddleware";
 import {
     appointmentSchema,
     updateAppointmentSchema,
@@ -18,29 +18,26 @@ const appointmentRouter = Router();
 
 appointmentRouter.post(
     "/create",
-    isAuthenticated,
     validate(appointmentSchema),
     createAppointment
 );
 
-appointmentRouter.get("/", isAuthenticated, getAllAppointments);
+appointmentRouter.get("/", getAllAppointments);
 
-appointmentRouter.get("/:id", isAuthenticated, getAppointmentById);
+appointmentRouter.get("/:id", getAppointmentById);
 
 appointmentRouter.put(
     "/update/:id",
-    isAuthenticated,
     validate(updateAppointmentSchema),
     updateAppointment
 );
 
 appointmentRouter.patch(
     "/status/:id",
-    isAuthenticated,
     validate(updateAppointmentStatusSchema),
     updateAppointmentStatus
 );
 
-appointmentRouter.delete("/delete/:id", isAuthenticated, deleteAppointment);
+appointmentRouter.delete("/delete/:id", deleteAppointment);
 
 export default appointmentRouter;

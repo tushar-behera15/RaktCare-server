@@ -37,19 +37,20 @@ export const signupSchema = z.object({
 
     dateOfBirth: z.coerce.date({
         error: "Please enter a valid date of birth.",
-    }),
+
+    }).nullable().optional(),
 
     bloodGroup: z.enum(
         ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
         {
             error: "Please select a valid blood group.",
         }
-    ),
+    ).nullable().optional(),
 
 
     gender: z.enum(["male", "female", "other"], {
         error: "Please select a valid gender.",
-    }),
+    }).nullable().optional(),
     address: z
         .string()
         .trim()

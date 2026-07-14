@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
 import HospitalModel from "../models/HospitalModel";
-
+import jwt from "jsonwebtoken";
 
 export async function createHospitalProfile(req: Request, res: Response) {
     try {
         const { hospitalName, registrationNumber, licenseNumber, address, city, state, pincode, emergencyContact, openingTime, closingTime, isVerified } = req.body;
 
-        const userId = (req as any).user.userId || (req as any).user.id;
+        const decodedToken = jwt.decode(req.cookies.refreshToken) as { userId: string };
+        const userId = decodedToken.userId;
 
         const existingHospital = await HospitalModel.findOne({ userId });
 

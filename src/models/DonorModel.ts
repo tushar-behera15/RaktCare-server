@@ -19,11 +19,11 @@ const donorSchema = new mongoose.Schema<IDonor>({
 
     weight: {
         type: Number,
-        min: 45
+        nullable: true,
     },
     hemoglobin: {
         type: Number,
-        min: 10
+        nullable: true,
     },
     diseases: {
         type: [String],

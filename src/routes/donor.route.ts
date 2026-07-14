@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { createDonorProfile, getAllDonors, getDonorById, updateDonorProfile } from "../controllers/donorController";
-import { validate, isAuthenticated } from "../middlewares/authMiddleware";
+import { validate } from "../middlewares/authMiddleware";
 import { donorProfileSchema } from "../validators/donor.validation";
 
 const donorRouter = Router();
 
-donorRouter.post("/create-profile", isAuthenticated, validate(donorProfileSchema), createDonorProfile)
-donorRouter.put("/update/:id", validate(donorProfileSchema), updateDonorProfile)
-donorRouter.get("/:id", getDonorById)
-donorRouter.get("/", getAllDonors)
+donorRouter.post("/create-profile", validate(donorProfileSchema), createDonorProfile);
+donorRouter.put("/update/:id", validate(donorProfileSchema), updateDonorProfile);
+donorRouter.get("/:id", getDonorById);
+donorRouter.get("/", getAllDonors);
 
 export default donorRouter;

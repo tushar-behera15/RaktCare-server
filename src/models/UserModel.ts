@@ -3,12 +3,12 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface IUser extends Document {
     fullName: string;
     email: string;
-    phone: string;
+    phone?: string;
     password: string;
     role: "admin" | "donor" | "hospital" | "recipient";
-    bloodGroup: string;
-    gender: "male" | "female" | "other";
-    dateOfBirth: Date;
+    bloodGroup?: string;
+    gender?: "male" | "female" | "other";
+    dateOfBirth?: Date;
     address?: string;
     city?: string;
     state?: string;
@@ -73,16 +73,28 @@ const userSchema = new Schema<IUser>(
 
         dateOfBirth: {
             type: Date,
-            required: true,
+            nullable: true,
         },
 
-        address: String,
+        address: {
+            type: String,
+            nullable: true,
+        },
 
-        city: String,
+        city: {
+            type: String,
+            nullable: true,
+        },
 
-        state: String,
+        state: {
+            type: String,
+            nullable: true,
+        },
 
-        pincode: String,
+        pincode: {
+            type: String,
+            nullable: true,
+        },
 
         profileImage: {
             type: String,

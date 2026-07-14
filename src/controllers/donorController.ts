@@ -1,12 +1,16 @@
 import { Request, Response } from "express";
 import DonorModel from "../models/DonorModel";
-
+import jwt from "jsonwebtoken";
 export async function createDonorProfile(req: Request, res: Response) {
     try {
         const { weight, hemoglobin, diseases, isAvailableForDonation, lastDonationDate } = req.body;
 
-        const userId = (req as any).user.userId || (req as any).user.id;
-
+        const token = req.cookies.refreshToken;
+        if (!token) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+        const decodedToken = jwt.decode(token) as { userId: string };
+        const userId = decodedToken.userId;
         const existingDonor = await DonorModel.findOne({ userId });
 
         if (existingDonor) {
@@ -30,6 +34,7 @@ export async function createDonorProfile(req: Request, res: Response) {
             data: donor
         })
     } catch (error) {
+
         return res.status(500).json({
             success: false,
 
