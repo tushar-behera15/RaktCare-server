@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import recipientModel from "../models/RecipientModel";
 import DonorModel from "../models/DonorModel";
 import HospitalModel from "../models/HospitalModel";
+import jwt from "jsonwebtoken";
 
 export async function createRecipient(req: Request, res: Response) {
     try {
@@ -47,13 +48,29 @@ export async function createRecipient(req: Request, res: Response) {
 
 export async function getAllRecipient(req: Request, res: Response) {
     try {
-        const recipients = await recipientModel.find();
-        if (!recipients) {
+        const decodedToken = jwt.decode(req.cookies.refreshToken) as { userId: string };
+        const userId = decodedToken.userId;
+
+        const hospital = await HospitalModel.findOne({ userId });
+        if (!hospital) {
             return res.status(404).json({
                 success: false,
-                message: "Recipients not found"
-            })
+                message: "Hospital profile not found",
+            });
         }
+
+        const recipients = await recipientModel
+            .find({
+                hospitalId: hospital._id,
+            })
+            .populate({
+                path: "assignedDonorId",
+                populate: {
+                    path: "userId",
+                    select: "fullName email phone bloodGroup"
+                }
+            });
+
         return res.status(200).json({
             success: true,
             message: "Recipients found successfully",

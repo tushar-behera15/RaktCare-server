@@ -33,6 +33,7 @@ export async function createHospitalProfile(req: Request, res: Response) {
             closingTime,
             isVerified
         })
+        console.log("Hospital User ID:", hospital.userId.toString());
 
         return res.status(201).json({
             success: true,

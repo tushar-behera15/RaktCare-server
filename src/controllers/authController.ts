@@ -7,6 +7,7 @@ import { generateOtp, OtpHtml } from "../utils/otpGenerate";
 import otpModel from "../models/Otp";
 import DonorModel from "../models/DonorModel";
 import HospitalModel from "../models/HospitalModel";
+import { create } from "node:domain";
 
 export async function signup(req: Request, res: Response) {
     try {
@@ -161,6 +162,7 @@ export async function getMe(req: Request & { user?: { userId: string; email?: st
                     gender: user?.gender,
                     dateOfBirth: user?.dateOfBirth,
                     address: user?.address,
+                    createdAt: user?.createdAt
                 },
                 donor: {
                     weight: donor?.weight,
@@ -177,22 +179,23 @@ export async function getMe(req: Request & { user?: { userId: string; email?: st
                 success: true,
                 message: "User fetched successfully",
                 user: {
-                    userId: user!._id,
-                    email: user!.email,
-                    role: user!.role,
+                    userId: user?._id,
+                    email: user?.email,
+                    role: user?.role,
+                    createdAt: user?.createdAt,
                 },
                 hospital: {
-                    hospitalName: hospital!.hospitalName,
-                    registrationNumber: hospital!.registrationNumber,
-                    licenseNumber: hospital!.licenseNumber,
-                    address: hospital!.address,
-                    city: hospital!.city,
-                    state: hospital!.state,
-                    pincode: hospital!.pincode,
-                    emergencyContact: hospital!.emergencyContact,
-                    openingTime: hospital!.openingTime,
-                    closingTime: hospital!.closingTime,
-                    isVerified: hospital!.isVerified
+                    hospitalName: hospital?.hospitalName,
+                    registrationNumber: hospital?.registrationNumber,
+                    licenseNumber: hospital?.licenseNumber,
+                    address: hospital?.address,
+                    city: hospital?.city,
+                    state: hospital?.state,
+                    pincode: hospital?.pincode,
+                    emergencyContact: hospital?.emergencyContact,
+                    openingTime: hospital?.openingTime,
+                    closingTime: hospital?.closingTime,
+                    isVerified: hospital?.isVerified
                 }
             });
         }
@@ -204,6 +207,7 @@ export async function getMe(req: Request & { user?: { userId: string; email?: st
                     userId: user._id,
                     email: user.email,
                     role: user.role,
+                    createdAt: user.createdAt,
                 },
 
             });
@@ -353,6 +357,7 @@ export async function verifyOtp(req: Request, res: Response) {
             email: user?.email,
             role: user?.role
         }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
