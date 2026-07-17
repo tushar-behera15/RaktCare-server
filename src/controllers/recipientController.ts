@@ -8,7 +8,8 @@ export async function createRecipient(req: Request, res: Response) {
     try {
         const { patientName, age, gender, contactNo, bloodGroup, unitNeeded, urgency, diseases } = req.body;
 
-        const userId = (req as any).user.userId || (req as any).user.id;
+        const decodedToken = jwt.decode(req.cookies.refreshToken) as { userId: string };
+        const userId = decodedToken.userId;
 
         const hospital = await HospitalModel.findOne({ userId });
 
