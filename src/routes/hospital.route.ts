@@ -6,6 +6,8 @@ import { recipientSchema } from "../validators/recipient.validation";
 import { confirmDonation, createRecipient, deleteRecipientById, findMatchingDonors, getAllRecipient, getRecipientById, updateRecipientById } from "../controllers/recipientController";
 import { bloodStockSchema } from "../validators/bloodStock.validation";
 import { addBloodStock, getBloodStockByGroup, getHospitalBloodStock, updateBloodStock } from "../controllers/bloodStockController";
+import { getAllAppointments, getAppointmentById, updateAppointmentStatus } from "../controllers/appointmentController";
+import { updateAppointmentStatusSchema } from "../validators/appointment.validation";
 
 
 const hospitalRouter = Router();
@@ -13,8 +15,8 @@ const hospitalRouter = Router();
 hospitalRouter.post("/create-profile", validate(hospitalProfileSchema), createHospitalProfile)
 
 hospitalRouter.put("/update-profile/:id", validate(hospitalProfileSchema), updateHospitalProfile)
-
 hospitalRouter.get("/:id", getHospitalById)
+
 
 hospitalRouter.get("/", getAllHospitals)
 
@@ -38,5 +40,12 @@ hospitalRouter.post("/bloodstock/create", isAuthenticated, validate(bloodStockSc
 hospitalRouter.put("/bloodstock/update/:id", isAuthenticated, validate(bloodStockSchema), updateBloodStock);
 hospitalRouter.get("/bloodstock/all", isAuthenticated, getHospitalBloodStock);
 hospitalRouter.get("/bloodstock/group/:bloodGroup", getBloodStockByGroup);
+
+// Appointement routes
+hospitalRouter.get("/appointments/all", isAuthenticated, getAllAppointments);
+
+hospitalRouter.get("/appointment/:id", getAppointmentById);
+hospitalRouter.patch("/appointment/status/:id", validate(updateAppointmentStatusSchema), updateAppointmentStatus);
+
 
 export default hospitalRouter;

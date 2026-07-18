@@ -3,48 +3,93 @@ import AppointmentModel from "../models/AppointmentModel";
 import DonorModel from "../models/DonorModel";
 import UserModel from "../models/UserModel";
 import BloodStockModel, { IBloodStock } from "../models/BloodStockModel";
+import HospitalModel from "../models/HospitalModel";
 
 export async function createAppointment(req: Request, res: Response) {
     try {
-        const { donorId, hospitalId, appointmentDate, remarks } = req.body;
+        const userId = (req as any).user.userId;
 
-        const pendingExists = await AppointmentModel.findOne({
-            donorId,
-            status: "pending",
-        });
+        const { hospitalId, appointmentDate, remarks } = req.body;
 
-        if (pendingExists) {
-            return res.status(409).json({
+        const donor = await DonorModel.findOne({ userId });
+
+        if (!donor) {
+            return res.status(404).json({
                 success: false,
-                message: "Donor already has a pending appointment. Please wait for it to be resolved before booking another.",
+                message: "Donor profile not found",
             });
         }
 
+        if (donor.lastDonationDate) {
 
-        if (new Date(appointmentDate) <= new Date()) {
+            const lastDonation = new Date(donor.lastDonationDate);
+
+            const nextEligibleDate = new Date(lastDonation);
+            nextEligibleDate.setDate(nextEligibleDate.getDate() + 90);
+
+            if (new Date() < nextEligibleDate) {
+
+                return res.status(400).json({
+                    success: false,
+                    message: `You are eligible to donate again after ${nextEligibleDate.toDateString()}.`,
+                });
+
+            }
+        }
+
+        const hospital = await HospitalModel.findById(hospitalId);
+
+        if (!hospital) {
+            return res.status(404).json({
+                success: false,
+                message: "Hospital not found",
+            });
+        }
+
+        const pendingAppointment = await AppointmentModel.findOne({
+            donorId: donor._id,
+            status: "pending",
+        });
+
+        if (pendingAppointment) {
+            return res.status(409).json({
+                success: false,
+                message:
+                    "You already have a pending appointment.",
+            });
+        }
+
+        const selectedDate = new Date(appointmentDate);
+
+        if (selectedDate <= new Date()) {
             return res.status(400).json({
                 success: false,
-                message: "Appointment date must be in the future",
+                message:
+                    "Appointment date must be in the future.",
             });
         }
 
         const appointment = await AppointmentModel.create({
-            donorId,
+            donorId: donor._id,
             hospitalId,
-            appointmentDate: new Date(appointmentDate),
+            appointmentDate: selectedDate,
             remarks,
+            status: "pending",
         });
 
         return res.status(201).json({
             success: true,
-            message: "Appointment booked successfully",
+            message: "Appointment booked successfully.",
             data: appointment,
         });
+
     } catch (error) {
         console.error(error);
+
         return res.status(500).json({
             success: false,
-            message: "Internal server error while creating appointment",
+            message:
+                "Internal server error while creating appointment.",
             error,
         });
     }
@@ -52,16 +97,39 @@ export async function createAppointment(req: Request, res: Response) {
 
 export async function getAllAppointments(req: Request, res: Response) {
     try {
-        const { status, donorId, hospitalId } = req.query;
+        const userId = (req as any).user.userId;
+        // const { status } = req.query;
 
-        const filter: Record<string, any> = {};
-        if (status) filter.status = status;
-        if (donorId) filter.donorId = donorId;
-        if (hospitalId) filter.hospitalId = hospitalId;
+        const hospital = await HospitalModel.findOne({ userId });
 
-        const appointments = await AppointmentModel.find(filter)
-            .populate("donorId", "userId isAvailableForDonation lastDonationDate donationCount")
-            .populate("hospitalId", "name address contactNo")
+        if (!hospital) {
+            return res.status(404).json({
+                success: false,
+                message: "Hospital profile not found",
+            });
+        }
+
+
+
+        // if (status) {
+        //     filter.status = status;
+        // }
+
+        // Fetch appointments
+        const appointments = await AppointmentModel.find({ hospitalId: hospital._id })
+            .populate({
+                path: "donorId",
+                select:
+                    "userId isAvailableForDonation lastDonationDate donationCount",
+                populate: {
+                    path: "userId",
+                    select: "fullName email phone bloodGroup",
+                },
+            })
+            .populate({
+                path: "hospitalId",
+                select: "name address contactNo",
+            })
             .sort({ appointmentDate: 1 });
 
         return res.status(200).json({
@@ -72,6 +140,7 @@ export async function getAllAppointments(req: Request, res: Response) {
         });
     } catch (error) {
         console.error(error);
+
         return res.status(500).json({
             success: false,
             message: "Internal server error while fetching appointments",
@@ -110,49 +179,6 @@ export async function getAppointmentById(req: Request, res: Response) {
     }
 }
 
-export async function updateAppointment(req: Request, res: Response) {
-    try {
-        const { id } = req.params;
-        const { appointmentDate, remarks } = req.body;
-
-        const existing = await AppointmentModel.findById(id);
-        if (!existing) {
-            return res.status(404).json({
-                success: false,
-                message: "Appointment not found",
-            });
-        }
-
-        if (existing.status !== "pending") {
-            return res.status(400).json({
-                success: false,
-                message: `Cannot reschedule an appointment that is already "${existing.status}"`,
-            });
-        }
-
-        const updated = await AppointmentModel.findByIdAndUpdate(
-            id,
-            {
-                ...(appointmentDate && { appointmentDate: new Date(appointmentDate) }),
-                ...(remarks !== undefined && { remarks }),
-            },
-            { new: true, runValidators: true }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Appointment updated successfully",
-            data: updated,
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error while updating appointment",
-            error,
-        });
-    }
-}
 
 export async function updateAppointmentStatus(req: Request, res: Response) {
     try {
@@ -232,38 +258,50 @@ export async function updateAppointmentStatus(req: Request, res: Response) {
     }
 }
 
-export async function deleteAppointment(req: Request, res: Response) {
+export async function getMyAppointments(req: Request, res: Response) {
     try {
-        const { id } = req.params;
+        const userId = (req as any).user.userId;
+        const { status } = req.query;
 
-        const appointment = await AppointmentModel.findById(id);
-        if (!appointment) {
+        const donor = await DonorModel.findOne({ userId });
+
+        if (!donor) {
             return res.status(404).json({
                 success: false,
-                message: "Appointment not found",
+                message: "Donor profile not found",
             });
         }
 
-        // Prevent deleting an already-Completed appointment (audit trail)
-        if (appointment.status === "completed") {
-            return res.status(400).json({
-                success: false,
-                message: "Completed appointments cannot be deleted",
-            });
+        const filter: Record<string, any> = {
+            donorId: donor._id,
+        };
+
+        if (status) {
+            filter.status = status;
         }
 
-        await AppointmentModel.findByIdAndDelete(id);
+        const appointments = await AppointmentModel.find(filter)
+            .populate({
+                path: "hospitalId",
+                select: "name address contactNo",
+            })
+            .sort({ appointmentDate: 1 });
 
         return res.status(200).json({
             success: true,
-            message: "Appointment deleted successfully",
+            message: "Appointments fetched successfully",
+            count: appointments.length,
+            data: appointments,
         });
+
     } catch (error) {
         console.error(error);
+
         return res.status(500).json({
             success: false,
-            message: "Internal server error while deleting appointment",
+            message: "Internal server error while fetching appointments",
             error,
         });
     }
 }
+
