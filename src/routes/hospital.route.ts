@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createHospitalProfile, getAllHospitals, getHospitalById, updateHospitalProfile } from "../controllers/hospitalController";
-import { validate } from "../middlewares/authMiddleware";
+import { isAuthenticated, validate } from "../middlewares/authMiddleware";
 import { hospitalProfileSchema } from "../validators/hospital.validation";
 import { recipientSchema } from "../validators/recipient.validation";
 import { confirmDonation, createRecipient, deleteRecipientById, findMatchingDonors, getAllRecipient, getRecipientById, updateRecipientById } from "../controllers/recipientController";
@@ -34,9 +34,9 @@ hospitalRouter.get("/recipient/:id/find-donors", findMatchingDonors);
 hospitalRouter.post("/recipient/confirm-donation", confirmDonation);
 
 //Blood stock routes
-hospitalRouter.post("/bloodstock/create/:id", validate(bloodStockSchema), addBloodStock);
-hospitalRouter.put("/bloodstock/update/:id", validate(bloodStockSchema), updateBloodStock);
-hospitalRouter.get("/bloodstock/:id", getHospitalBloodStock);
+hospitalRouter.post("/bloodstock/create", isAuthenticated, validate(bloodStockSchema), addBloodStock);
+hospitalRouter.put("/bloodstock/update/:id", isAuthenticated, validate(bloodStockSchema), updateBloodStock);
+hospitalRouter.get("/bloodstock/all", isAuthenticated, getHospitalBloodStock);
 hospitalRouter.get("/bloodstock/group/:bloodGroup", getBloodStockByGroup);
 
 export default hospitalRouter;
