@@ -44,7 +44,7 @@ hospitalRouter.get("/bloodstock/group/:bloodGroup", getBloodStockByGroup);
 // Appointement routes
 hospitalRouter.get("/appointments/all", isAuthenticated, getAllAppointments);
 
-hospitalRouter.get("/appointment/:id", getAppointmentById);
+hospitalRouter.get("/appointment/:id", isAuthenticated, getAppointmentById);
 hospitalRouter.patch("/appointment/status/:id", validate(updateAppointmentStatusSchema), updateAppointmentStatus);
 
 
