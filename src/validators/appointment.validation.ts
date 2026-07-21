@@ -1,7 +1,6 @@
 import z from "zod";
 
 export const appointmentSchema = z.object({
-    donorId: z.string().min(1, "Donor ID is required"),
     hospitalId: z.string().min(1, "Hospital ID is required"),
     appointmentDate: z
         .string()

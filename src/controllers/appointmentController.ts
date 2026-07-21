@@ -154,8 +154,19 @@ export async function getAppointmentById(req: Request, res: Response) {
         const { id } = req.params;
 
         const appointment = await AppointmentModel.findById(id)
-            .populate("donorId", "userId isAvailableForDonation lastDonationDate donationCount")
-            .populate("hospitalId", "name address contactNo");
+            .populate({
+                path: "donorId",
+                select:
+                    "userId isAvailableForDonation lastDonationDate donationCount",
+                populate: {
+                    path: "userId",
+                    select: "fullName email phone bloodGroup",
+                },
+            })
+            .populate({
+                path: "hospitalId",
+                select: "hospitalName address contactNo",
+            });
 
         if (!appointment) {
             return res.status(404).json({
