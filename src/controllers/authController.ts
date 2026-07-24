@@ -168,6 +168,7 @@ export async function getMe(req: Request & { user?: { userId: string; email?: st
                     weight: donor?.weight,
                     hemoglobin: donor?.hemoglobin,
                     diseases: donor?.diseases,
+                    donationCount: donor?.donationCount,
                     isAvailableForDonation: donor?.isAvailableForDonation,
                     lastDonationDate: donor?.lastDonationDate
                 }

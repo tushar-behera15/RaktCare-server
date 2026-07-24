@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import DonorModel from "../models/DonorModel";
 import jwt from "jsonwebtoken";
+import UserModel from "../models/UserModel";
 export async function createDonorProfile(req: Request, res: Response) {
     try {
         const { weight, hemoglobin, diseases, isAvailableForDonation, lastDonationDate } = req.body;
@@ -48,39 +49,80 @@ export async function createDonorProfile(req: Request, res: Response) {
 
 export async function updateDonorProfile(req: Request, res: Response) {
     try {
-        const { weight, hemoglobin, diseases, isAvailableForDonation, lastDonationDate } = req.body;
+        const userId = (req as any).user.userId;
 
-        const { id } = req.params;
-        const existingDonor = await DonorModel.findOne({ _id: id });
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
 
-        if (!existingDonor) {
+        const {
+            fullName,
+            phone,
+            dateOfBirth,
+            gender,
+            weight,
+            hemoglobin,
+            diseases,
+            isAvailableForDonation,
+        } = req.body;
+
+        const donor = await DonorModel.findOne({ userId });
+
+        if (!donor) {
             return res.status(404).json({
                 success: false,
                 message: "Donor profile not found",
             });
         }
-        const updatedDonor = await DonorModel.findByIdAndUpdate(
-            existingDonor._id,
+
+        await UserModel.findByIdAndUpdate(
+            userId,
+            {
+                fullName,
+                phone,
+                dateOfBirth,
+                gender,
+            },
+            {
+                new: true,
+                runValidators: true,
+            }
+        );
+
+        await DonorModel.findOneAndUpdate(
+            { userId },
             {
                 weight,
                 hemoglobin,
                 diseases,
                 isAvailableForDonation,
-                lastDonationDate
             },
-            { new: true, runValidators: true }
+            {
+                new: true,
+                runValidators: true,
+            }
         );
+
+        const updatedProfile = await DonorModel.findOne({ userId }).populate({
+            path: "userId",
+            select:
+                "fullName email phone bloodGroup gender dateOfBirth",
+        });
 
         return res.status(200).json({
             success: true,
-            message: "Donor profile updated successfully",
-            data: updatedDonor,
+            message: "Donor profile updated successfully.",
+            data: updatedProfile,
         });
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             success: false,
-            message: "Internal server error while updating donor profile",
-            error: error,
+            message: "Internal server error while updating donor profile.",
         });
     }
 }

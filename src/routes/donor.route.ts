@@ -8,7 +8,7 @@ import { createAppointment, getMyAppointments } from "../controllers/appointment
 const donorRouter = Router();
 // Donor routes
 donorRouter.post("/create-profile", validate(donorProfileSchema), createDonorProfile);
-donorRouter.put("/update/:id", validate(donorProfileSchema), updateDonorProfile);
+donorRouter.put("/update-profile", isAuthenticated, validate(donorProfileSchema), updateDonorProfile);
 donorRouter.get("/:id", getDonorById);
 donorRouter.get("/", getAllDonors);
 
